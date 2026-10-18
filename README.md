@@ -54,14 +54,14 @@ API_SEMESTER_PROJECT/
 ├── spec/
 │   └── library-api.yaml          OpenAPI 3.0 specification
 ├── database/
-│   ├── kisii_library_schema.sql  Table definitions only
-│   ├── seed.sql                  Sample data
-│   └── KISII_LIBRARY.sql         Full export (tables and data)
+│   ├── KISII_LIBRARY.sql         Full export of the database
+│   ├── fix_schema.sql            One-time fixes to the first version of the tables
+│   └── seed.sql                  Sample data
 └── reports/
     └── Week-01-Progress-Report.docx ... Week-15-Progress-Report.docx
 ```
 
-Add the `spec/` and `reports/` folders and the schema and seed files as you complete each part.
+Add the `spec/` and `reports/` folders and the fix and seed files as you complete each part.
 
 ---
 
@@ -76,16 +76,16 @@ mysql -u root -p -e "CREATE DATABASE KISII_LIBRARY CHARACTER SET utf8mb4;"
 mysql -u root -p KISII_LIBRARY < database/KISII_LIBRARY.sql
 ```
 
-The export does not create the database itself, which is why the first command comes first.
+The export does not create the database itself, which is why the first command comes first. If your export holds only the table structure, run `database/seed.sql` afterwards to add the sample data.
 
-**Option B: build from scratch**
+**Option B: start from the first version of the tables**
 
 ```
-mysql -u root -p < database/kisii_library_schema.sql
-mysql -u root -p < database/seed.sql
+mysql -u root -p KISII_LIBRARY < database/fix_schema.sql
+mysql -u root -p KISII_LIBRARY < database/seed.sql
 ```
 
-The schema script creates the database and the tables. The seed script then fills them with sample rows. Table and database names are not case sensitive on Windows, but they are on Linux, so keep the same capitalisation in every file.
+`fix_schema.sql` is run **once** on the first version of the tables. It adds auto-numbering, the missing foreign key and the missing loan columns. The export already includes these fixes, so do not run it again after restoring the export. `seed.sql` then fills the tables with sample rows. Table and database names are not case sensitive on Windows, but they are on Linux, so keep the same capitalisation in every file.
 
 **Check it worked**
 
@@ -166,7 +166,7 @@ The API follows REST: resources are named with plural nouns, the HTTP method is 
 
 ## 5. Data models
 
-Field names in the API use camelCase. The matching database columns use snake_case (for example `regNo` and `reg_no`).
+Field names in the API use camelCase. The matching database columns use capital letters and underscores (for example `regNo` and `Reg_No`, `totalCopies` and `Total_Copies`).
 
 **Book**
 
@@ -240,15 +240,15 @@ MySQL, using the InnoDB engine (needed for foreign keys). Database name: `KISII_
 
 | Table | Primary key | Foreign keys |
 |---|---|---|
-| `categories` | `id` | none |
-| `authors` | `id` | none |
-| `members` | `id` | none |
-| `books` | `id` | `category_id` → `categories.id` |
-| `book_authors` | `book_id` + `author_id` | `book_id` → `books.id`, `author_id` → `authors.id` |
-| `loans` | `id` | `book_id` → `books.id`, `member_id` → `members.id` |
-| `reservations` | `id` | `book_id` → `books.id`, `member_id` → `members.id` |
-| `fines` | `id` | `loan_id` → `loans.id`, `member_id` → `members.id` |
-| `notifications` | `id` | `member_id` → `members.id` |
+| `categories` | `Category_ID` | none |
+| `authors` | `Author_ID` | none |
+| `members` | `Member_ID` | none |
+| `books` | `Book_ID` | `Category_ID` → `categories.Category_ID` |
+| `book_authors` | `Book_ID` + `Author_ID` | `Book_ID` → `books.Book_ID`, `Author_ID` → `authors.Author_ID` |
+| `loans` | `Loan_ID` | `Book_ID` → `books.Book_ID`, `Member_ID` → `members.Member_ID` |
+| `reservations` | `Reservation_ID` | `Book_ID` → `books.Book_ID`, `Member_ID` → `members.Member_ID` |
+| `fines` | `Fine_ID` | `Loan_ID` → `loans.Loan_ID`, `Member_ID` → `members.Member_ID` |
+| `notifications` | `Notification_ID` | `Member_ID` → `members.Member_ID` |
 
 ```
 categories ──< books >── book_authors ──< authors
@@ -266,9 +266,12 @@ categories ──< books >── book_authors ──< authors
 
 ### Design decisions
 
-- **Surrogate primary keys.** Every table has an `id` that never changes. Real-world identifiers such as `isbn` and `reg_no` are `UNIQUE` columns instead, because they can contain typos, be missing (older books, staff), or change.
+- **Surrogate primary keys.** Every table has its own id column (for example `Book_ID`) that never changes. Real-world identifiers such as `Isbn` and `Reg_No` are `UNIQUE` columns instead, because they can contain typos, be missing (older books, staff), or change.
+- **Auto-numbering.** Every id column uses `AUTO_INCREMENT`, so a new row gets the next number automatically.
 - **`book_authors` link table.** A book can have several authors and an author can write several books, which needs a table in the middle.
-- **`ON DELETE` rules.** Loans, reservations and fines use `RESTRICT`, so a book or member that still has records cannot be deleted. `book_authors` and `notifications` use `CASCADE`, and a book's category uses `SET NULL`.
+- **`ON DELETE` rules.** `book_authors` uses `CASCADE`, so deleting a book or an author removes its links. Every other foreign key keeps the MySQL default (`RESTRICT`), so a book or member that still has records cannot be deleted.
+- **Phone numbers are text** (`VARCHAR`), because they can start with 0 or be too long for a number column.
+- **Loan dates.** A loan has `Borrowed_at`, `Due_date` and `Returned_at`. `Returned_at` stays empty until the book comes back, and `Status` (`Active`, `Returned`, `Overdue`) shows where the loan stands.
 - **Table names** are plural, lowercase and use underscores, to match the API paths.
 - **Create tables in this order**, because a foreign key can only point to an existing table: `categories`, `authors`, `members`, `books`, `book_authors`, `loans`, `reservations`, `fines`, `notifications`.
 
@@ -276,21 +279,21 @@ categories ──< books >── book_authors ──< authors
 
 | Column | Type |
 |---|---|
-| `isbn` | `VARCHAR(20)`, unique (text, because ISBNs can start with 0, contain X or hyphens) |
-| `title` | `VARCHAR(255)` |
-| `description` | `TEXT` |
-| `publisher` | `VARCHAR(150)` |
-| `published_year` | `SMALLINT` |
-| `category_id` | `INT` (same type as `categories.id`) |
-| `total_copies`, `available_copies` | `INT` |
+| `Isbn` | `VARCHAR(20)`, unique (text, because ISBNs can start with 0, contain X or hyphens) |
+| `Title` | `VARCHAR(200)` |
+| `Description` | `TEXT` |
+| `Publisher` | `VARCHAR(100)` |
+| `Published_Year` | `INT` |
+| `Category_ID` | `INT` (same type as `categories.Category_ID`) |
+| `Total_Copies`, `Available_Copies` | `INT` |
 
 ### Files
 
 | File | Purpose |
 |---|---|
-| `database/kisii_library_schema.sql` | Creates the database and all nine tables |
-| `database/seed.sql` | Inserts the sample data |
 | `database/KISII_LIBRARY.sql` | Full export made with `mysqldump` |
+| `database/fix_schema.sql` | Run once on the first version of the tables: auto-numbering, the books foreign key and unique ISBN, the loan due date, renewals and status, text phone numbers, unique email, and `Is_active` for members |
+| `database/seed.sql` | Inserts the sample data |
 
 **Re-export after changes**
 
@@ -302,7 +305,7 @@ mysqldump -u root -p KISII_LIBRARY > database/KISII_LIBRARY.sql
 
 ## 7. Sample (seed) data
 
-`database/seed.sql` fills the database with made-up rows so every endpoint has something to return. Rows are inserted parent tables first.
+`database/seed.sql` fills the database with made-up rows so every endpoint has something to return. Run it once, after `fix_schema.sql`. Rows are inserted parent tables first.
 
 | Table | Rows | What is in them |
 |---|---|---|
@@ -321,7 +324,7 @@ All data is invented and contains no real student information.
 **Test that the foreign keys work.** This should fail with a "foreign key constraint fails" error, which proves the database is protecting your data:
 
 ```sql
-INSERT INTO loans (book_id, member_id, due_date) VALUES (999, 1, '2026-11-01');
+INSERT INTO loans (Book_ID, Member_ID, Borrowed_at, Due_date) VALUES (999, 1, '2026-10-18', '2026-11-01');
 ```
 
 ---
