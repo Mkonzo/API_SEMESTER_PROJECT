@@ -87,6 +87,7 @@ CREATE TABLE `books` (
   PRIMARY KEY (`Book_ID`),
   UNIQUE KEY `uq_books_isbn` (`Isbn`),
   KEY `fk_books_category` (`Category_ID`),
+  KEY `idx_books_title` (`Title`),
   CONSTRAINT `fk_books_category` FOREIGN KEY (`Category_ID`) REFERENCES `categories` (`Category_ID`)
 ) ENGINE=InnoDB AUTO_INCREMENT=5 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 /*!40101 SET character_set_client = @saved_cs_client */;
@@ -180,7 +181,7 @@ CREATE TABLE `loans` (
   `Status` enum('Active','Returned','Overdue') NOT NULL DEFAULT 'Active',
   PRIMARY KEY (`Loan_ID`),
   KEY `Book_ID` (`Book_ID`),
-  KEY `Member_ID` (`Member_ID`),
+  KEY `idx_loans_member` (`Member_ID`,`Status`),
   CONSTRAINT `loans_ibfk_1` FOREIGN KEY (`Book_ID`) REFERENCES `books` (`Book_ID`),
   CONSTRAINT `loans_ibfk_2` FOREIGN KEY (`Member_ID`) REFERENCES `members` (`Member_ID`)
 ) ENGINE=InnoDB AUTO_INCREMENT=4 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
@@ -299,4 +300,4 @@ UNLOCK TABLES;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-10-18 19:08:54
+-- Dump completed on 2026-10-19 14:29:33
