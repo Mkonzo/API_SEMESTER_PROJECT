@@ -1,0 +1,1008 @@
+openapi: 3.0.3
+info:
+  title: Kisii University Library API
+  version: 1.0.0
+  description: >
+    API for searching the catalog, borrowing, reserving, renewing and
+    returning books, and paying fines. DRAFT - agree field names with your
+    team and keep this file as the single source of truth.
+servers:
+  - url: http://localhost:3000/v1
+    description: Local development
+  - url: https://your-api.example.com/v1
+    description: Deployed API (replace with your real URL)
+
+tags:
+  - name: Books
+  - name: Members
+  - name: Loans
+  - name: Reservations
+  - name: Fines
+  - name: Categories
+  - name: Authors
+  - name: Notifications
+  - name: External
+  - name: AI
+  - name: Auth
+  - name: System
+
+security:
+  - bearerAuth: []
+
+paths:
+  /health:
+    get:
+      tags: [System]
+      summary: Check that the API and database are running
+      security: []
+      responses:
+        '200':
+          description: The API is running
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status: { type: string, example: ok }
+                  database: { type: string, example: connected }
+
+  /auth/login:
+    post:
+      tags: [Auth]
+      summary: Log in and receive a token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoginRequest' }
+      responses:
+        '200':
+          description: Login worked
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LoginResponse' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+
+  /books:
+    get:
+      tags: [Books]
+      summary: List or search books
+      parameters:
+        - name: q
+          in: query
+          description: Search text (title, author or ISBN)
+          schema: { type: string }
+        - name: categoryId
+          in: query
+          schema: { type: integer }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+        - name: sort
+          in: query
+          description: Field to sort by, prefix with - for descending (e.g. -title)
+          schema: { type: string }
+      responses:
+        '200':
+          description: A page of books
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BookList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Books]
+      summary: Add a book
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BookInput' }
+      responses:
+        '201':
+          description: Book created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Book' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /books/{bookId}:
+    parameters:
+      - $ref: '#/components/parameters/BookId'
+    get:
+      tags: [Books]
+      summary: Get one book
+      responses:
+        '200':
+          description: The book
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Book' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    put:
+      tags: [Books]
+      summary: Replace a book
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BookInput' }
+      responses:
+        '200':
+          description: Book updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Book' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Books]
+      summary: Change part of a book
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BookPatch' }
+      responses:
+        '200':
+          description: Book updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Book' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Books]
+      summary: Remove a book
+      responses:
+        '204': { description: Book removed }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /members:
+    get:
+      tags: [Members]
+      summary: List members (librarians only)
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: A page of members
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MemberList' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+    post:
+      tags: [Members]
+      summary: Register a member
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MemberInput' }
+      responses:
+        '201':
+          description: Member registered
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Member' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /members/{memberId}:
+    parameters:
+      - $ref: '#/components/parameters/MemberId'
+    get:
+      tags: [Members]
+      summary: Get one member (the member themselves or a librarian)
+      responses:
+        '200':
+          description: The member
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Member' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    patch:
+      tags: [Members]
+      summary: Update member details
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MemberPatch' }
+      responses:
+        '200':
+          description: Member updated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Member' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /members/{memberId}/deactivate:
+    post:
+      tags: [Members]
+      summary: Deactivate a member (librarians only)
+      parameters:
+        - $ref: '#/components/parameters/MemberId'
+      responses:
+        '200':
+          description: Member deactivated
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Member' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /loans:
+    get:
+      tags: [Loans]
+      summary: List loans (members see only their own)
+      parameters:
+        - name: memberId
+          in: query
+          schema: { type: integer }
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/LoanStatus' }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: A page of loans
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LoanList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+    post:
+      tags: [Loans]
+      summary: Borrow a book
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LoanInput' }
+      responses:
+        '201':
+          description: Loan created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Loan' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: No copies available, or the member is blocked by unpaid fines
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /loans/{loanId}:
+    get:
+      tags: [Loans]
+      summary: Get one loan
+      parameters:
+        - $ref: '#/components/parameters/LoanId'
+      responses:
+        '200':
+          description: The loan
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Loan' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /loans/{loanId}/return:
+    post:
+      tags: [Loans]
+      summary: Return a book
+      parameters:
+        - $ref: '#/components/parameters/LoanId'
+      responses:
+        '200':
+          description: Loan closed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Loan' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /loans/{loanId}/renew:
+    post:
+      tags: [Loans]
+      summary: Renew a loan (extends the due date)
+      parameters:
+        - $ref: '#/components/parameters/LoanId'
+      responses:
+        '200':
+          description: Loan renewed
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Loan' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409':
+          description: Renewal limit reached, or the book is reserved by someone else
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Error' }
+
+  /reservations:
+    get:
+      tags: [Reservations]
+      summary: List reservations
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: A page of reservations
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReservationList' }
+    post:
+      tags: [Reservations]
+      summary: Reserve a book
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReservationInput' }
+      responses:
+        '201':
+          description: Reservation created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Reservation' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /reservations/{reservationId}:
+    parameters:
+      - name: reservationId
+        in: path
+        required: true
+        schema: { type: integer }
+    get:
+      tags: [Reservations]
+      summary: Get one reservation
+      responses:
+        '200':
+          description: The reservation
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Reservation' }
+        '404': { $ref: '#/components/responses/NotFound' }
+    delete:
+      tags: [Reservations]
+      summary: Cancel a reservation
+      responses:
+        '204': { description: Reservation cancelled }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /fines:
+    get:
+      tags: [Fines]
+      summary: List fines (members see only their own)
+      parameters:
+        - name: status
+          in: query
+          schema: { $ref: '#/components/schemas/FineStatus' }
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: A page of fines
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/FineList' }
+
+  /fines/{fineId}:
+    get:
+      tags: [Fines]
+      summary: Get one fine
+      parameters:
+        - $ref: '#/components/parameters/FineId'
+      responses:
+        '200':
+          description: The fine
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Fine' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /fines/calculate:
+    post:
+      tags: [Fines]
+      summary: Calculate the fine for a loan
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [loanId]
+              properties:
+                loanId: { type: integer, example: 1 }
+      responses:
+        '200':
+          description: Calculated fine (0 if the loan is not overdue)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  loanId: { type: integer }
+                  daysOverdue: { type: integer, example: 3 }
+                  amount: { type: number, format: double, example: 30.00 }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /fines/{fineId}/pay:
+    post:
+      tags: [Fines]
+      summary: Pay a fine
+      parameters:
+        - $ref: '#/components/parameters/FineId'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                mpesaReceipt: { type: string, example: QJK1ABC234 }
+      responses:
+        '200':
+          description: Fine marked as paid
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Fine' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /categories:
+    get:
+      tags: [Categories]
+      summary: List categories
+      security: []
+      responses:
+        '200':
+          description: All categories
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Category' }
+    post:
+      tags: [Categories]
+      summary: Create a category
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CategoryInput' }
+      responses:
+        '201':
+          description: Category created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Category' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
+  /categories/{categoryId}:
+    get:
+      tags: [Categories]
+      summary: Get one category
+      security: []
+      parameters:
+        - name: categoryId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: The category
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Category' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /authors:
+    get:
+      tags: [Authors]
+      summary: List authors
+      security: []
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: A page of authors
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/AuthorList' }
+    post:
+      tags: [Authors]
+      summary: Create an author
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/AuthorInput' }
+      responses:
+        '201':
+          description: Author created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Author' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /authors/{authorId}:
+    get:
+      tags: [Authors]
+      summary: Get one author
+      security: []
+      parameters:
+        - name: authorId
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200':
+          description: The author
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Author' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /notifications:
+    get:
+      tags: [Notifications]
+      summary: List notifications (members see only their own)
+      parameters:
+        - $ref: '#/components/parameters/Page'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: A page of notifications
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/NotificationList' }
+    post:
+      tags: [Notifications]
+      summary: Send a notification (librarians only)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/NotificationInput' }
+      responses:
+        '201':
+          description: Notification queued
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Notification' }
+        '400': { $ref: '#/components/responses/BadRequest' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /external/isbn/{isbn}:
+    get:
+      tags: [External]
+      summary: Look up book details by ISBN (auto-fill)
+      parameters:
+        - name: isbn
+          in: path
+          required: true
+          schema: { type: string, example: '9780000000001' }
+      responses:
+        '200':
+          description: Book details found
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/BookInput' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /external/students/{regNo}/verify:
+    get:
+      tags: [External]
+      summary: Check with the student registry that a student is enrolled
+      security: []
+      parameters:
+        - name: regNo
+          in: path
+          required: true
+          schema: { type: string, example: CS/0001/2022 }
+      responses:
+        '200':
+          description: Verification result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  regNo: { type: string }
+                  enrolled: { type: boolean }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /payments/mpesa/initiate:
+    post:
+      tags: [External]
+      summary: Start an M-Pesa payment for a fine
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fineId, phone]
+              properties:
+                fineId: { type: integer }
+                phone: { type: string, example: '254700000000' }
+      responses:
+        '202':
+          description: Payment request sent to the member's phone
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  checkoutRequestId: { type: string }
+        '400': { $ref: '#/components/responses/BadRequest' }
+
+  /ai/recommendations/{memberId}:
+    get:
+      tags: [AI]
+      summary: Recommend books based on borrowing history
+      parameters:
+        - $ref: '#/components/parameters/MemberId'
+      responses:
+        '200':
+          description: Recommended books
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Book' }
+        '404': { $ref: '#/components/responses/NotFound' }
+
+  /ai/search:
+    get:
+      tags: [AI]
+      summary: Natural-language book search
+      parameters:
+        - name: q
+          in: query
+          required: true
+          schema: { type: string, example: books about learning python for beginners }
+      responses:
+        '200':
+          description: Matching books
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Book' }
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  parameters:
+    Page:
+      name: page
+      in: query
+      schema: { type: integer, minimum: 1, default: 1 }
+    Limit:
+      name: limit
+      in: query
+      schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+    BookId:
+      name: bookId
+      in: path
+      required: true
+      schema: { type: integer }
+    MemberId:
+      name: memberId
+      in: path
+      required: true
+      schema: { type: integer }
+    LoanId:
+      name: loanId
+      in: path
+      required: true
+      schema: { type: integer }
+    FineId:
+      name: fineId
+      in: path
+      required: true
+      schema: { type: integer }
+
+  responses:
+    BadRequest:
+      description: The request is invalid
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Unauthorized:
+      description: Missing or invalid token
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Forbidden:
+      description: You are not allowed to do this
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    NotFound:
+      description: The resource does not exist
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+    Conflict:
+      description: The request conflicts with the current state (for example a duplicate)
+      content:
+        application/json:
+          schema: { $ref: '#/components/schemas/Error' }
+
+  schemas:
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string, format: email, example: student1@example.com }
+        password: { type: string, format: password }
+    LoginResponse:
+      type: object
+      properties:
+        token: { type: string, description: JWT to send as Authorization Bearer token }
+        memberId: { type: integer, example: 1 }
+        role:
+          type: string
+          enum: [member, librarian]
+
+    Error:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string, example: NOT_FOUND }
+        message: { type: string, example: Book 99 was not found }
+
+    PageMeta:
+      type: object
+      properties:
+        page: { type: integer, example: 1 }
+        limit: { type: integer, example: 20 }
+        total: { type: integer, example: 134 }
+
+    LoanStatus:
+      type: string
+      enum: [active, returned, overdue]
+    FineStatus:
+      type: string
+      enum: [unpaid, paid]
+    MemberType:
+      type: string
+      enum: [student, staff]
+
+    BookInput:
+      type: object
+      required: [title]
+      properties:
+        isbn: { type: string, maxLength: 20, example: '9780000000001' }
+        title: { type: string, maxLength: 255, example: Things Fall Apart }
+        description: { type: string }
+        publisher: { type: string, maxLength: 150, example: Heinemann }
+        publishedYear: { type: integer, example: 1958 }
+        categoryId: { type: integer, nullable: true, example: 1 }
+        authorIds:
+          type: array
+          items: { type: integer }
+        totalCopies: { type: integer, minimum: 0, default: 1 }
+    BookPatch:
+      type: object
+      properties:
+        title: { type: string }
+        description: { type: string }
+        publisher: { type: string }
+        publishedYear: { type: integer }
+        categoryId: { type: integer, nullable: true }
+        totalCopies: { type: integer, minimum: 0 }
+    Book:
+      allOf:
+        - $ref: '#/components/schemas/BookInput'
+        - type: object
+          required: [id]
+          properties:
+            id: { type: integer, example: 1 }
+            availableCopies: { type: integer, example: 3 }
+    BookList:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/Book' }
+        meta: { $ref: '#/components/schemas/PageMeta' }
+
+    MemberInput:
+      type: object
+      required: [regNo, fullName, email]
+      properties:
+        regNo: { type: string, maxLength: 30, example: CS/0001/2022 }
+        fullName: { type: string, maxLength: 150, example: Test Student }
+        email: { type: string, format: email }
+        phone: { type: string, example: '0700000000' }
+        memberType: { $ref: '#/components/schemas/MemberType' }
+        password:
+          type: string
+          format: password
+          writeOnly: true
+    MemberPatch:
+      type: object
+      properties:
+        fullName: { type: string }
+        email: { type: string, format: email }
+        phone: { type: string }
+    Member:
+      type: object
+      required: [id, regNo, fullName, email]
+      properties:
+        id: { type: integer, example: 1 }
+        regNo: { type: string }
+        fullName: { type: string }
+        email: { type: string, format: email }
+        phone: { type: string }
+        memberType: { $ref: '#/components/schemas/MemberType' }
+        isActive: { type: boolean, example: true }
+    MemberList:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/Member' }
+        meta: { $ref: '#/components/schemas/PageMeta' }
+
+    LoanInput:
+      type: object
+      required: [bookId, memberId]
+      properties:
+        bookId: { type: integer, example: 1 }
+        memberId: { type: integer, example: 1 }
+    Loan:
+      type: object
+      required: [id, bookId, memberId, dueDate, status]
+      properties:
+        id: { type: integer, example: 1 }
+        bookId: { type: integer }
+        memberId: { type: integer }
+        borrowedAt: { type: string, format: date-time }
+        dueDate: { type: string, format: date, example: '2026-11-01' }
+        returnedAt: { type: string, format: date-time, nullable: true }
+        renewalCount: { type: integer, example: 0 }
+        status: { $ref: '#/components/schemas/LoanStatus' }
+    LoanList:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/Loan' }
+        meta: { $ref: '#/components/schemas/PageMeta' }
+
+    ReservationInput:
+      type: object
+      required: [bookId, memberId]
+      properties:
+        bookId: { type: integer }
+        memberId: { type: integer }
+    Reservation:
+      type: object
+      properties:
+        id: { type: integer }
+        bookId: { type: integer }
+        memberId: { type: integer }
+        reservedAt: { type: string, format: date-time }
+        expiresAt: { type: string, format: date-time, nullable: true }
+        status:
+          type: string
+          enum: [waiting, ready, fulfilled, cancelled]
+    ReservationList:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/Reservation' }
+        meta: { $ref: '#/components/schemas/PageMeta' }
+
+    Fine:
+      type: object
+      properties:
+        id: { type: integer }
+        loanId: { type: integer }
+        memberId: { type: integer }
+        amount: { type: number, format: double, example: 30.00 }
+        reason:
+          type: string
+          enum: [overdue, damage]
+        status: { $ref: '#/components/schemas/FineStatus' }
+        issuedAt: { type: string, format: date-time }
+        paidAt: { type: string, format: date-time, nullable: true }
+        mpesaReceipt: { type: string, nullable: true }
+    FineList:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/Fine' }
+        meta: { $ref: '#/components/schemas/PageMeta' }
+
+    CategoryInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, maxLength: 100, example: Fiction }
+        description: { type: string }
+    Category:
+      allOf:
+        - $ref: '#/components/schemas/CategoryInput'
+        - type: object
+          properties:
+            id: { type: integer, example: 1 }
+
+    AuthorInput:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, maxLength: 150, example: Chinua Achebe }
+        bio: { type: string }
+    Author:
+      allOf:
+        - $ref: '#/components/schemas/AuthorInput'
+        - type: object
+          properties:
+            id: { type: integer, example: 1 }
+    AuthorList:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/Author' }
+        meta: { $ref: '#/components/schemas/PageMeta' }
+
+    NotificationInput:
+      type: object
+      required: [memberId, channel, message]
+      properties:
+        memberId: { type: integer }
+        channel:
+          type: string
+          enum: [email, sms]
+        subject: { type: string, maxLength: 200 }
+        message: { type: string }
+    Notification:
+      allOf:
+        - $ref: '#/components/schemas/NotificationInput'
+        - type: object
+          properties:
+            id: { type: integer }
+            status:
+              type: string
+              enum: [pending, sent, failed]
+            sentAt: { type: string, format: date-time, nullable: true }
+    NotificationList:
+      type: object
+      properties:
+        data:
+          type: array
+          items: { $ref: '#/components/schemas/Notification' }
+        meta: { $ref: '#/components/schemas/PageMeta' }
