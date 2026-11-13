@@ -55,10 +55,15 @@ API_SEMESTER_PROJECT/
 │   └── library-api.yaml          OpenAPI 3.0 specification
 ├── database/
 │   ├── KISII_LIBRARY.sql         Full export of the database
-│   ├── fix_schema.sql            One-time fixes to the first version of the tables
-│   └── seed.sql                  Sample data
-└── reports/
-    └── Week-01-Progress-Report.docx ... Week-15-Progress-Report.docx
+│   ├── migrations/               Numbered changes 001 to 007 (the history of the database)
+│   ├── fix_schema.sql            One-time fixes (kept for reference, same as migration 002)
+│   ├── seed.sql                  Sample data
+│   ├── seed_extra.sql            Sample data for the newer tables
+│   └── apply_new.sql             Runs migrations 004 to 007 and seed_extra.sql in one go
+├── reports/
+│   └── Week-01-Progress-Report.docx ... Week-15-Progress-Report.docx
+└── evidence/
+    └── Screenshots that show the work (mock server, tests, live API)
 ```
 
 Add the `spec/` and `reports/` folders and the fix and seed files as you complete each part.
@@ -78,14 +83,31 @@ mysql -u root -p KISII_LIBRARY < database/KISII_LIBRARY.sql
 
 The export does not create the database itself, which is why the first command comes first. If your export holds only the table structure, run `database/seed.sql` afterwards to add the sample data.
 
-**Option B: start from the first version of the tables**
+**Option B: build a brand-new database from the numbered files**
+
+Run these in this order, each against an empty server:
 
 ```
-mysql -u root -p KISII_LIBRARY < database/fix_schema.sql
-mysql -u root -p KISII_LIBRARY < database/seed.sql
+mysql -u root -p < database/migrations/001_initial_schema.sql
+mysql -u root -p < database/migrations/002_fix_schema.sql
+mysql -u root -p < database/migrations/003_add_indexes.sql
+mysql -u root -p < database/seed.sql
+mysql -u root -p < database/migrations/004_student_registry.sql
+mysql -u root -p < database/migrations/005_integrity_rules.sql
+mysql -u root -p < database/migrations/006_ai_data_store.sql
+mysql -u root -p < database/migrations/007_mpesa_and_sync.sql
+mysql -u root -p < database/seed_extra.sql
 ```
 
-`fix_schema.sql` is run **once** on the first version of the tables. It adds auto-numbering, the missing foreign key and the missing loan columns. The export already includes these fixes, so do not run it again after restoring the export. `seed.sql` then fills the tables with sample rows. Table and database names are not case sensitive on Windows, but they are on Linux, so keep the same capitalisation in every file.
+The result is identical to the export. Migrations 001 to 003 record the first version of the tables and the fixes that were applied to it, so **do not run 001 to 003 on a database that already has the tables**. Table and database names are not case sensitive on Windows, but they are on Linux, so keep the same capitalisation in every file.
+
+**Option C: add only the newer parts to an existing database**
+
+If you restored an older export that lacks the newer tables, run this once:
+
+```
+mysql -u root -p KISII_LIBRARY < database/apply_new.sql
+```
 
 **Check it worked**
 
@@ -264,6 +286,34 @@ categories ──< books >── book_authors ──< authors
 
 `──<` means one on the left, many on the right.
 
+### Newer tables and views
+
+| Name | Type | Purpose | Migration |
+|---|---|---|---|
+| `student_registry` | table | The university's student list, used to check enrollment | 004 |
+| `v_verify_student` | view | What the verify-student endpoint reads | 004 |
+| `book_embeddings` | table | One stored vector per book and AI model, for smart search | 006 |
+| `recommendation_log` | table | What the recommender suggested to whom | 006 |
+| `demand_forecast` | table | Predicted loans per book per month | 006 |
+| `v_borrow_history` | view | Every loan with its book's category | 006 |
+| `v_book_popularity` | view | How often each book is borrowed | 006 |
+| `mpesa_transactions` | table | Every M-Pesa payment attempt for a fine | 007 |
+| `registry_sync_log` | table | Every run of the student registry sync | 007 |
+
+Migration 004 also adds `Is_verified` and `Verified_at` to `members`.
+
+### Safety rules (migration 005)
+
+The database itself rejects data that makes no sense:
+
+- Copies can't be negative, and available copies can't exceed total copies.
+- A loan's due date and return date can't be before its borrow date, and it can be renewed at most 2 times.
+- A loan marked `Returned` must have a return date, and an unreturned loan must not have one.
+- A fine can't be negative, and a `Paid` fine must have a paid date.
+- A reservation can't expire before it was made.
+
+These rules need MySQL 8.0.16 or newer.
+
 ### Design decisions
 
 - **Surrogate primary keys.** Every table has its own id column (for example `Book_ID`) that never changes. Real-world identifiers such as `Isbn` and `Reg_No` are `UNIQUE` columns instead, because they can contain typos, be missing (older books, staff), or change.
@@ -294,6 +344,9 @@ categories ──< books >── book_authors ──< authors
 | `database/KISII_LIBRARY.sql` | Full export made with `mysqldump` |
 | `database/fix_schema.sql` | Run once on the first version of the tables: auto-numbering, the books foreign key and unique ISBN, the loan due date, renewals and status, text phone numbers, unique email, and `Is_active` for members |
 | `database/seed.sql` | Inserts the sample data |
+| `database/migrations/` | `001` to `007`: every change to the database, in order |
+| `database/seed_extra.sql` | Sample rows for the newer tables |
+| `database/apply_new.sql` | Runs migrations 004 to 007 and `seed_extra.sql` in one go |
 
 **Re-export after changes**
 
