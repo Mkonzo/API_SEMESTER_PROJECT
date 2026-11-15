@@ -11,6 +11,7 @@ Each file is one change to the KISII_LIBRARY database. They are numbered in the 
 | 005_integrity_rules.sql | Safety rules (CHECK constraints) | No, run once |
 | 006_ai_data_store.sql | Embeddings, recommendation log, demand forecast, history views | No, run once |
 | 007_mpesa_and_sync.sql | M-Pesa transactions and registry sync log | No, run once |
+| 008_app_users.sql | Limited database users (needs passwords set first, see the file) | No, run once |
 
 Never run a migration twice. A second run fails because the change already exists.
 To build a brand-new database, follow Option B in the main README.

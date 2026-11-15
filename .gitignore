@@ -1,0 +1,15 @@
+# Secrets: never commit these
+.env
+.env.*
+!.env.example
+*.cnf
+*.pem
+*.key
+
+# Backups can hold real data. Keep them off GitHub.
+backups/
+
+# Node and editor files
+node_modules/
+*.log
+.DS_Store

@@ -55,7 +55,9 @@ API_SEMESTER_PROJECT/
 │   └── library-api.yaml          OpenAPI 3.0 specification
 ├── database/
 │   ├── KISII_LIBRARY.sql         Full export of the database
-│   ├── migrations/               Numbered changes 001 to 007 (the history of the database)
+│   ├── migrations/               Numbered changes 001 to 008 (the history of the database)
+│   ├── backup/                   backup.sh and restore.sh
+│   ├── SECURITY.md               Users, secrets, backups and recovery explained
 │   ├── fix_schema.sql            One-time fixes (kept for reference, same as migration 002)
 │   ├── seed.sql                  Sample data
 │   ├── seed_extra.sql            Sample data for the newer tables
@@ -98,6 +100,8 @@ mysql -u root -p < database/migrations/006_ai_data_store.sql
 mysql -u root -p < database/migrations/007_mpesa_and_sync.sql
 mysql -u root -p < database/seed_extra.sql
 ```
+
+Optionally, finish with `008_app_users.sql` to create the limited users. It needs passwords set first, so read the top of that file or `database/SECURITY.md`.
 
 The result is identical to the export. Migrations 001 to 003 record the first version of the tables and the fixes that were applied to it, so **do not run 001 to 003 on a database that already has the tables**. Table and database names are not case sensitive on Windows, but they are on Linux, so keep the same capitalisation in every file.
 
@@ -314,6 +318,28 @@ The database itself rejects data that makes no sense:
 
 These rules need MySQL 8.0.16 or newer.
 
+### Database users and security (migration 008)
+
+The backend must not connect as `root`. Migration 008 creates three limited users. Their passwords are typed into the MySQL client and are never stored in the repository.
+
+| User | For | Can do |
+|---|---|---|
+| `library_app` | The backend | Read, add, change and delete rows. Cannot create, alter or drop tables. |
+| `library_readonly` | Reports and AI features | Read only |
+| `library_backup` | The backup script | Read only, plus what a backup needs |
+
+The `.gitignore` keeps `.env`, `*.cnf`, keys and the `backups/` folder out of GitHub. Details are in `database/SECURITY.md`.
+
+### Backup and recovery
+
+```
+bash database/backup/backup.sh                          # take a backup into backups/
+bash database/backup/restore.sh --verify backups/FILE.sql   # prove a backup works (nothing live changes)
+bash database/backup/restore.sh backups/FILE.sql            # restore (asks you to type YES)
+```
+
+A failed or empty backup is never saved, and the restore script refuses empty or cut-off files. See `database/SECURITY.md` for the full steps.
+
 ### Design decisions
 
 - **Surrogate primary keys.** Every table has its own id column (for example `Book_ID`) that never changes. Real-world identifiers such as `Isbn` and `Reg_No` are `UNIQUE` columns instead, because they can contain typos, be missing (older books, staff), or change.
@@ -347,6 +373,8 @@ These rules need MySQL 8.0.16 or newer.
 | `database/migrations/` | `001` to `007`: every change to the database, in order |
 | `database/seed_extra.sql` | Sample rows for the newer tables |
 | `database/apply_new.sql` | Runs migrations 004 to 007 and `seed_extra.sql` in one go |
+| `database/backup/backup.sh`, `restore.sh` | Safe backup and restore scripts |
+| `database/SECURITY.md` | Users, secrets, SSL, backups and recovery explained |
 
 **Re-export after changes**
 
