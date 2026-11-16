@@ -1,0 +1,56 @@
+# Runs on every push that touches the database folder.
+# It builds a fresh MySQL database from the numbered files and checks it.
+# See database/ci/check_database.sh for exactly what is checked.
+name: Database CI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "database/**"
+      - ".github/workflows/database-ci.yml"
+  pull_request:
+    paths:
+      - "database/**"
+      - ".github/workflows/database-ci.yml"
+  workflow_dispatch:
+
+jobs:
+  check-database:
+    name: Build and check the database
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          # A throwaway password for a temporary test database that is deleted
+          # when the job ends. It is NOT a real secret and protects nothing.
+          MYSQL_ROOT_PASSWORD: ci_only_throwaway_password
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -uroot -pci_only_throwaway_password"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=12
+
+    steps:
+      - name: Get the code
+        uses: actions/checkout@v4
+
+      - name: Make sure the MySQL client tools are installed
+        run: |
+          if ! command -v mysqldump >/dev/null 2>&1; then
+            sudo apt-get update -q && sudo apt-get install -y -q mysql-client
+          fi
+          mysql --version
+
+      - name: Build the database and run the checks
+        env:
+          MYSQL_HOST: 127.0.0.1
+          MYSQL_PORT: "3306"
+          MYSQL_USER: root
+          MYSQL_PWD: ci_only_throwaway_password
+        run: bash database/ci/check_database.sh

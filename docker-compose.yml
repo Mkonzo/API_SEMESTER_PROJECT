@@ -1,0 +1,31 @@
+# Runs the KISII_LIBRARY database in Docker, with your saved export loaded.
+#
+#   1. Copy .env.example to .env and choose a password
+#   2. docker compose up -d
+#   3. mysql -h 127.0.0.1 -P 3307 -u root -p KISII_LIBRARY
+#
+# The database is loaded from database/KISII_LIBRARY.sql the FIRST time it
+# starts. After that your data lives in the "db_data" volume.
+# To wipe it and start again:  docker compose down -v
+services:
+  db:
+    image: mysql:8.0
+    container_name: kisii_library_db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Copy .env.example to .env and set MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: KISII_LIBRARY
+    ports:
+      # 3307 on your computer, so it does not clash with a MySQL already installed on 3306
+      - "3307:3306"
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./database/KISII_LIBRARY.sql:/docker-entrypoint-initdb.d/01-library.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+
+volumes:
+  db_data:

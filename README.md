@@ -51,6 +51,10 @@ The OpenAPI file in `spec/` is the **single source of truth**. If this README an
 ```
 API_SEMESTER_PROJECT/
 ├── README.md
+├── .github/workflows/
+│   └── database-ci.yml           GitHub builds and checks the database on every push
+├── docker-compose.yml            Runs the database in Docker
+├── .env.example                  Names of the settings Docker needs (copy to .env)
 ├── spec/
 │   └── library-api.yaml          OpenAPI 3.0 specification
 ├── database/
@@ -58,6 +62,7 @@ API_SEMESTER_PROJECT/
 │   ├── migrations/               Numbered changes 001 to 008 (the history of the database)
 │   ├── backup/                   backup.sh and restore.sh
 │   ├── SECURITY.md               Users, secrets, backups and recovery explained
+│   ├── ci/                       check_database.sh: builds and checks a fresh database
 │   ├── fix_schema.sql            One-time fixes (kept for reference, same as migration 002)
 │   ├── seed.sql                  Sample data
 │   ├── seed_extra.sql            Sample data for the newer tables
@@ -340,6 +345,32 @@ bash database/backup/restore.sh backups/FILE.sql            # restore (asks you 
 
 A failed or empty backup is never saved, and the restore script refuses empty or cut-off files. See `database/SECURITY.md` for the full steps.
 
+### Automatic checks and Docker (D6)
+
+**Automatic checks.** Every time you push a change inside `database/`, GitHub starts a temporary MySQL 8, builds a fresh database from the numbered files, and runs `database/ci/check_database.sh`. It checks that:
+
+- every migration and seed file runs without errors
+- the database has the expected tables, views, foreign keys and safety rules
+- the sample data is all there
+- bad data is rejected and good data is accepted
+- the export saved in the repository is **not empty**, is complete, and loads into an empty database
+- `backup.sh` and `restore.sh` work, and restore refuses an empty backup
+
+Open the **Actions** tab of the repository to see a green tick (passed) or a red cross (failed). The script works in its own database called `KISII_LIBRARY_CI` and refuses to touch `KISII_LIBRARY`. You can run it yourself with `bash database/ci/check_database.sh`.
+
+When you add a migration or change the sample data, update the `EXPECTED_` numbers at the top of the script.
+
+**Docker.** `docker-compose.yml` starts MySQL 8 in a container and loads `database/KISII_LIBRARY.sql` the first time it runs. You need Docker Desktop installed.
+
+```
+cp .env.example .env          # then edit .env and choose a password
+docker compose up -d
+mysql -h 127.0.0.1 -P 3307 -u root -p KISII_LIBRARY
+docker compose down           # stop it (your data is kept)
+```
+
+It uses port 3307 so it does not clash with a MySQL already on your computer. `docker compose down -v` also deletes the data.
+
 ### Design decisions
 
 - **Surrogate primary keys.** Every table has its own id column (for example `Book_ID`) that never changes. Real-world identifiers such as `Isbn` and `Reg_No` are `UNIQUE` columns instead, because they can contain typos, be missing (older books, staff), or change.
@@ -375,6 +406,9 @@ A failed or empty backup is never saved, and the restore script refuses empty or
 | `database/apply_new.sql` | Runs migrations 004 to 007 and `seed_extra.sql` in one go |
 | `database/backup/backup.sh`, `restore.sh` | Safe backup and restore scripts |
 | `database/SECURITY.md` | Users, secrets, SSL, backups and recovery explained |
+| `database/ci/check_database.sh` | The automatic checks (also runnable by hand) |
+| `.github/workflows/database-ci.yml` | Makes GitHub run those checks on every push |
+| `docker-compose.yml`, `.env.example` | Runs the database in Docker |
 
 **Re-export after changes**
 
