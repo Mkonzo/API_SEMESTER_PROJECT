@@ -1,6 +1,6 @@
 # Database security, backup and recovery
 
-Written for the KISII_LIBRARY database (workbook sub-teams D8 and D9).
+Written for the KISII_LIBRARY database .
 
 ## 1. Who can do what (least privilege)
 
