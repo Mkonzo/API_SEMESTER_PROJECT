@@ -32,8 +32,10 @@ WEBHOOK="${ALERT_WEBHOOK_URL:-}"
 SHOW_METRICS=0
 [ "${1:-}" = "--metrics" ] && SHOW_METRICS=1
 
+# On Windows (Git Bash) a Windows program needs a Windows-style path to the option file
+cnf_path() { if command -v cygpath >/dev/null 2>&1; then cygpath -w "$1"; else printf '%s' "$1"; fi; }
 if [ -f "$CNF" ]; then
-  AUTH=(--defaults-extra-file="$CNF")
+  AUTH=(--defaults-extra-file="$(cnf_path "$CNF")")
 else
   AUTH=(-u "$DB_USER")
   [ -n "${MYSQL_HOST:-}" ] && AUTH+=(-h "$MYSQL_HOST" -P "${MYSQL_PORT:-3306}" --protocol=TCP)

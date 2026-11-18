@@ -12,8 +12,11 @@
 #   DB_NAME   database to back up        default KISII_LIBRARY
 #   DB_USER   user to connect as         default library_backup
 #   KEEP      how many backups to keep   default 7
+#   MYSQL_HOST / MYSQL_PORT   connect over the network (default: this computer)
+#   MYSQL_PWD    the password, if you do not want to be asked
 #   LIBRARY_CNF  a file holding user/password so nothing is typed
-#                (default ~/.library_backup.cnf, never put it in the repo)
+#                (default ~/.library_backup.cnf, never put it in the repo).
+#                If the password has # or \ or quote characters, see SECURITY.md.
 # ============================================================
 set -u
 
@@ -29,12 +32,18 @@ STAMP="$(date +%Y-%m-%d_%H%M%S)"
 FINAL="$OUT_DIR/${DB_NAME}_${STAMP}.sql"
 TMP="$(mktemp "$OUT_DIR/.tmp_backup.XXXXXX")"
 
+# On Windows (Git Bash) a Windows program needs a Windows-style path to the option file
+cnf_path() { if command -v cygpath >/dev/null 2>&1; then cygpath -w "$1"; else printf '%s' "$1"; fi; }
 if [ -f "$CNF" ]; then
-  AUTH=(--defaults-extra-file="$CNF")
+  AUTH=(--defaults-extra-file="$(cnf_path "$CNF")")
 else
-  read -r -s -p "Password for MySQL user $DB_USER: " MYSQL_PWD; echo
-  export MYSQL_PWD
   AUTH=(-u "$DB_USER")
+  [ -n "${MYSQL_HOST:-}" ] && AUTH+=(-h "$MYSQL_HOST" -P "${MYSQL_PORT:-3306}" --protocol=TCP)
+  # the password comes from MYSQL_PWD if it is already set, otherwise you are asked once
+  if [ -z "${MYSQL_PWD+x}" ]; then
+    read -r -s -p "Password for MySQL user $DB_USER: " MYSQL_PWD; echo
+  fi
+  export MYSQL_PWD
 fi
 
 echo "Backing up $DB_NAME ..."

@@ -1,6 +1,6 @@
 # Database security, backup and recovery
 
-Written for the KISII_LIBRARY database .
+Written for the KISII_LIBRARY database (workbook sub-teams D8 and D9).
 
 ## 1. Who can do what (least privilege)
 
@@ -56,6 +56,9 @@ EOT
 ```
 
 The script uses it automatically. Never put this file inside the project folder.
+
+**If the password contains `#`, `\`, `"` or `'`**, put it in double quotes in this file, write every backslash twice, and write every double quote as `\"`. For example, a password `ab#c\d` is written as `password="ab#c\\d"`. Without the quotes, MySQL treats `#` as the start of a comment and changes the `\`, so the password is cut short or altered and the connection fails. If in doubt, skip the file: the scripts then ask for the password each time, and any special characters are fine.
+
 
 **When to back up**
 

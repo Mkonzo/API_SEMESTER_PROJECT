@@ -111,6 +111,9 @@ EOT
 
 The script uses it automatically. Never put it in the project folder.
 
+**If the password contains `#`, `\`, `"` or `'`**, put it in double quotes in this file, write every backslash twice, and write every double quote as `\"`. For example, a password `ab#c\d` is written as `password="ab#c\\d"`. Without the quotes, MySQL treats `#` as the start of a comment and changes the `\`, so the password is cut short or altered and the connection fails. If in doubt, skip the file: the scripts then ask for the password each time, and any special characters are fine.
+
+
 ## 4. The slow query log
 
 A slow query is one that takes more than 1 second. Turn the log on once, as root, in the MySQL Command Line Client:

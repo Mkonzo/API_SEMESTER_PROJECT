@@ -15,6 +15,7 @@
 #       Nothing in KISII_LIBRARY changes.
 #
 # DB_USER defaults to root, because restoring needs the right to create tables.
+# MYSQL_HOST / MYSQL_PORT connect over the network; MYSQL_PWD supplies the password.
 # (You are asked for the password once, and your typing is hidden.)
 # ============================================================
 set -u
@@ -24,10 +25,18 @@ DB_USER="${DB_USER:-root}"
 SOURCE_DB="${SOURCE_DB:-KISII_LIBRARY}"
 CNF="${LIBRARY_RESTORE_CNF:-$HOME/.library_restore.cnf}"
 
-if [ -f "$CNF" ]; then AUTH=(--defaults-extra-file="$CNF"); else
-  read -r -s -p "Password for MySQL user $DB_USER: " MYSQL_PWD; echo
-  export MYSQL_PWD
+# On Windows (Git Bash) a Windows program needs a Windows-style path to the option file
+cnf_path() { if command -v cygpath >/dev/null 2>&1; then cygpath -w "$1"; else printf '%s' "$1"; fi; }
+if [ -f "$CNF" ]; then
+  AUTH=(--defaults-extra-file="$(cnf_path "$CNF")")
+else
   AUTH=(-u "$DB_USER")
+  [ -n "${MYSQL_HOST:-}" ] && AUTH+=(-h "$MYSQL_HOST" -P "${MYSQL_PORT:-3306}" --protocol=TCP)
+  # the password comes from MYSQL_PWD if it is already set, otherwise you are asked once
+  if [ -z "${MYSQL_PWD+x}" ]; then
+    read -r -s -p "Password for MySQL user $DB_USER: " MYSQL_PWD; echo
+  fi
+  export MYSQL_PWD
 fi
 
 # tr removes the hidden carriage returns that mysql.exe adds on Windows

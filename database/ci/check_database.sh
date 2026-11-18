@@ -38,13 +38,8 @@ HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 DBDIR="$HERE/database"
 
 ARGS=(-u "$USER_NAME")
-CNF_EXTRA="user=$USER_NAME"
 if [ -n "${MYSQL_HOST:-}" ]; then
   ARGS+=(-h "$MYSQL_HOST" -P "${MYSQL_PORT:-3306}" --protocol=TCP)
-  CNF_EXTRA="$CNF_EXTRA
-host=$MYSQL_HOST
-port=${MYSQL_PORT:-3306}
-protocol=tcp"
 fi
 if [ -z "${MYSQL_PWD+x}" ]; then
   read -r -s -p "Password for MySQL user $USER_NAME: " MYSQL_PWD; echo
@@ -150,19 +145,25 @@ else
 fi
 
 echo "== 9. Backup and restore scripts"
-printf "[client]\n%s\npassword=%s\n" "$CNF_EXTRA" "$MYSQL_PWD" > "$WORK/ci.cnf"
+# The scripts get their login from the environment, never from a file. Any password
+# file in your home folder is ignored here, so the test cannot pick up the wrong login.
+NOCNF="$WORK/no-such-file.cnf"
+script_env() {
+  env MYSQL_PWD="$MYSQL_PWD" DB_USER="$USER_NAME" MYSQL_HOST="${MYSQL_HOST:-}" MYSQL_PORT="${MYSQL_PORT:-3306}" \
+      LIBRARY_CNF="$NOCNF" LIBRARY_RESTORE_CNF="$NOCNF" LIBRARY_MONITOR_CNF="$NOCNF" "$@"
+}
 ( cd "$WORK" && mkdir -p database/backup && cp "$DBDIR"/backup/*.sh database/backup/ \
-  && LIBRARY_CNF="$WORK/ci.cnf" DB_NAME="$DB" bash database/backup/backup.sh >"$WORK/backup.log" 2>&1 )
+  && script_env DB_NAME="$DB" bash database/backup/backup.sh >"$WORK/backup.log" 2>&1 )
 BFILE="$(ls -1t "$WORK"/backups/"${DB}"_*.sql 2>/dev/null | head -1)"
-if [ -n "$BFILE" ] && [ -s "$BFILE" ]; then ok "backup.sh made a backup ($(wc -c < "$BFILE") bytes)"; else bad "backup.sh did not make a backup: $(tail -1 "$WORK/backup.log")"; fi
+if [ -n "$BFILE" ] && [ -s "$BFILE" ]; then ok "backup.sh made a backup ($(wc -c < "$BFILE") bytes)"; else bad "backup.sh did not make a backup: $(tail -3 "$WORK/backup.log" | tr '\n' ' ')"; fi
 if [ -n "$BFILE" ]; then
-  if LIBRARY_RESTORE_CNF="$WORK/ci.cnf" SOURCE_DB="$DB" bash "$DBDIR/backup/restore.sh" --verify "$BFILE" >"$WORK/verify.log" 2>&1; then ok "restore.sh --verify printed PASS"; else bad "restore.sh --verify failed: $(tail -1 "$WORK/verify.log")"; fi
+  if script_env SOURCE_DB="$DB" bash "$DBDIR/backup/restore.sh" --verify "$BFILE" >"$WORK/verify.log" 2>&1; then ok "restore.sh --verify printed PASS"; else bad "restore.sh --verify failed: $(tail -3 "$WORK/verify.log" | tr '\n' ' ')"; fi
 fi
 : > "$WORK/empty.sql"
-if LIBRARY_RESTORE_CNF="$WORK/ci.cnf" bash "$DBDIR/backup/restore.sh" "$WORK/empty.sql" "${DB}_VERIFY" >/dev/null 2>&1; then bad "restore.sh accepted an EMPTY backup file"; else ok "restore.sh refuses an empty backup file"; fi
+if script_env bash "$DBDIR/backup/restore.sh" "$WORK/empty.sql" "${DB}_VERIFY" >/dev/null 2>&1; then bad "restore.sh accepted an EMPTY backup file"; else ok "restore.sh refuses an empty backup file"; fi
 
 echo "== 10. Health check script"
-LIBRARY_MONITOR_CNF="$WORK/ci.cnf" DB_NAME="$DB" BACKUP_DIR="$WORK/backups" bash "$DBDIR/monitor/health_check.sh" >"$WORK/health.log" 2>&1
+script_env DB_NAME="$DB" BACKUP_DIR="$WORK/backups" bash "$DBDIR/monitor/health_check.sh" >"$WORK/health.log" 2>&1
 HC=$?
 if [ "$HC" -le 1 ] && grep -q "Library database health" "$WORK/health.log"; then ok "health_check.sh ran (result code $HC: 0 = OK, 1 = warnings)"; else bad "health_check.sh gave code $HC: $(tail -2 "$WORK/health.log" | tr '\n' ' ')"; fi
 
