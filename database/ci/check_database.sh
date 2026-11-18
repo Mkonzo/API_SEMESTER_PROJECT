@@ -75,7 +75,7 @@ echo "== 2. Building a fresh database from the numbered files"
 q "DROP DATABASE IF EXISTS \`$DB\`" || exit 1
 for f in migrations/001_initial_schema.sql migrations/002_fix_schema.sql migrations/003_add_indexes.sql seed.sql \
          migrations/004_student_registry.sql migrations/005_integrity_rules.sql migrations/006_ai_data_store.sql \
-         migrations/007_mpesa_and_sync.sql seed_extra.sql migrations/009_monitoring.sql; do
+         migrations/007_mpesa_and_sync.sql seed_extra.sql migrations/009_monitoring.sql migrations/010_portable_table_sizes_view.sql; do
   if [ ! -f "$DBDIR/$f" ]; then bad "missing file database/$f"; continue; fi
   if run_file "$DBDIR/$f" 2>"$WORK/err.txt"; then ok "ran $f"; else bad "$f failed: $(head -1 "$WORK/err.txt")"; fi
 done
@@ -146,7 +146,7 @@ else
   if sed "s/KISII_LIBRARY/$EXPORT_DB/g" "$EXPORT" | mysql "${ARGS[@]}" "$EXPORT_DB" 2>"$WORK/err.txt"; then
     ok "export loads into an empty database"
     expect_equal "tables in the export" "$(q "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='$EXPORT_DB' AND TABLE_TYPE='BASE TABLE'")" "$EXPECTED_TABLES"
-  else bad "export failed to load: $(head -1 "$WORK/err.txt")"; fi
+  else bad "export failed to load: $(head -1 "$WORK/err.txt") (an export made on Windows must also load on Linux; see database/migrations/010)"; fi
 fi
 
 echo "== 9. Backup and restore scripts"

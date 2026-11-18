@@ -155,7 +155,7 @@ A webhook address works like a password, so keep it out of the repository (set i
 
 ## 8. Checklist
 
-- [ ] Migration 009 run, and `SELECT * FROM v_monitor_alerts;` works
+- [ ] Migrations 009 and 010 run, and `SELECT * FROM v_monitor_alerts;` works
 - [ ] `health_check.sh` run by hand and the result understood
 - [ ] Slow query log turned on
 - [ ] A webhook or schedule set up, if you want it automatic

@@ -13,6 +13,7 @@ Each file is one change to the KISII_LIBRARY database. They are numbered in the 
 | 007_mpesa_and_sync.sql | M-Pesa transactions and registry sync log | No, run once |
 | 008_app_users.sql | Limited database users (needs passwords set first, see the file) | No, run once |
 | 009_monitoring.sql | Change log, health views and alert rules (run after the sample data is loaded) | No, run once |
+| 010_portable_table_sizes_view.sql | Fixes the table-sizes view so an export made on Windows also loads on Linux (run right after 009) | No, run once |
 
 Never run a migration twice. A second run fails because the change already exists.
 To build a brand-new database, follow Option B in the main README.

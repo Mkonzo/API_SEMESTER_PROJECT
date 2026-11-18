@@ -898,12 +898,12 @@ SET character_set_client = @saved_cs_client;
 /*!50001 SET @saved_cs_client          = @@character_set_client */;
 /*!50001 SET @saved_cs_results         = @@character_set_results */;
 /*!50001 SET @saved_col_connection     = @@collation_connection */;
-/*!50001 SET character_set_client      = cp850 */;
-/*!50001 SET character_set_results     = cp850 */;
-/*!50001 SET collation_connection      = cp850_general_ci */;
+/*!50001 SET character_set_client      = utf8mb4 */;
+/*!50001 SET character_set_results     = utf8mb4 */;
+/*!50001 SET collation_connection      = utf8mb4_0900_ai_ci */;
 /*!50001 CREATE ALGORITHM=UNDEFINED */
 /*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
-/*!50001 VIEW `v_monitor_table_sizes` AS select `information_schema`.`tables`.`TABLE_NAME` AS `Table_name`,`information_schema`.`tables`.`TABLE_ROWS` AS `Approx_rows`,round((((`information_schema`.`tables`.`DATA_LENGTH` + `information_schema`.`tables`.`INDEX_LENGTH`) / 1024) / 1024),3) AS `Size_mb` from `information_schema`.`TABLES` where ((`information_schema`.`tables`.`TABLE_SCHEMA` = 'KISII_LIBRARY') and (`information_schema`.`tables`.`TABLE_TYPE` = 'BASE TABLE')) */;
+/*!50001 VIEW `v_monitor_table_sizes` AS select `information_schema`.`t`.`TABLE_NAME` AS `Table_name`,`information_schema`.`t`.`TABLE_ROWS` AS `Approx_rows`,round((((`information_schema`.`t`.`DATA_LENGTH` + `information_schema`.`t`.`INDEX_LENGTH`) / 1024) / 1024),3) AS `Size_mb` from `information_schema`.`TABLES` `t` where ((lower(`information_schema`.`t`.`TABLE_SCHEMA`) = convert(lower('KISII_LIBRARY') using utf8mb3)) and (`information_schema`.`t`.`TABLE_TYPE` = 'BASE TABLE')) */;
 /*!50001 SET character_set_client      = @saved_cs_client */;
 /*!50001 SET character_set_results     = @saved_cs_results */;
 /*!50001 SET collation_connection      = @saved_col_connection */;
@@ -935,4 +935,4 @@ SET character_set_client = @saved_cs_client;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-11-18  3:25:38
+-- Dump completed on 2026-11-18  8:21:23

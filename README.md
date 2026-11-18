@@ -59,7 +59,7 @@ API_SEMESTER_PROJECT/
 │   └── library-api.yaml          OpenAPI 3.0 specification
 ├── database/
 │   ├── KISII_LIBRARY.sql         Full export of the database
-│   ├── migrations/               Numbered changes 001 to 009 (the history of the database)
+│   ├── migrations/               Numbered changes 001 to 010 (the history of the database)
 │   ├── backup/                   backup.sh and restore.sh
 │   ├── SECURITY.md               Users, secrets, backups and recovery explained
 │   ├── ci/                       check_database.sh: builds and checks a fresh database
@@ -108,7 +108,7 @@ mysql -u root -p < database/migrations/007_mpesa_and_sync.sql
 mysql -u root -p < database/seed_extra.sql
 ```
 
-Optionally, finish with `008_app_users.sql` to create the limited users (it needs passwords set first, so read the top of that file or `database/SECURITY.md`), and then `009_monitoring.sql` for the change log and health views (see `database/MONITORING.md`). Always run 009 **after** the sample data is loaded.
+Optionally, finish with `008_app_users.sql` to create the limited users (it needs passwords set first, so read the top of that file or `database/SECURITY.md`), and then `009_monitoring.sql` for the change log and health views (see `database/MONITORING.md`), followed straight away by `010_portable_table_sizes_view.sql`. Always run 009 **after** the sample data is loaded.
 
 The result is identical to the export. Migrations 001 to 003 record the first version of the tables and the fixes that were applied to it, so **do not run 001 to 003 on a database that already has the tables**. Table and database names are not case sensitive on Windows, but they are on Linux, so keep the same capitalisation in every file.
 
@@ -371,7 +371,7 @@ Details, an example report and scheduling are in `database/MONITORING.md`.
 - `backup.sh` and `restore.sh` work, and restore refuses an empty backup
 - `health_check.sh` runs
 
-Open the **Actions** tab of the repository to see a green tick (passed) or a red cross (failed). The script works in its own database called `KISII_LIBRARY_CI` and refuses to touch `KISII_LIBRARY`. You can run it yourself with `bash database/ci/check_database.sh`.
+Open the **Actions** tab of the repository to see a green tick (passed) or a red cross (failed). The export is made on Windows but GitHub and Docker load it on Linux, which treats upper and lower case in names differently, so this check also catches problems that would only show up there. It caught one in the table-sizes view, which migration 010 fixed. The script works in its own database called `KISII_LIBRARY_CI` and refuses to touch `KISII_LIBRARY`. You can run it yourself with `bash database/ci/check_database.sh`.
 
 When you add a migration or change the sample data, update the `EXPECTED_` numbers at the top of the script.
 
