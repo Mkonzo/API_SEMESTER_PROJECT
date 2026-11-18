@@ -59,10 +59,12 @@ API_SEMESTER_PROJECT/
 │   └── library-api.yaml          OpenAPI 3.0 specification
 ├── database/
 │   ├── KISII_LIBRARY.sql         Full export of the database
-│   ├── migrations/               Numbered changes 001 to 008 (the history of the database)
+│   ├── migrations/               Numbered changes 001 to 009 (the history of the database)
 │   ├── backup/                   backup.sh and restore.sh
 │   ├── SECURITY.md               Users, secrets, backups and recovery explained
 │   ├── ci/                       check_database.sh: builds and checks a fresh database
+│   ├── monitor/                  health_check.sh and enable_logging.sql
+│   ├── MONITORING.md             Change log, alerts, health check and slow query log explained
 │   ├── fix_schema.sql            One-time fixes (kept for reference, same as migration 002)
 │   ├── seed.sql                  Sample data
 │   ├── seed_extra.sql            Sample data for the newer tables
@@ -106,7 +108,7 @@ mysql -u root -p < database/migrations/007_mpesa_and_sync.sql
 mysql -u root -p < database/seed_extra.sql
 ```
 
-Optionally, finish with `008_app_users.sql` to create the limited users. It needs passwords set first, so read the top of that file or `database/SECURITY.md`.
+Optionally, finish with `008_app_users.sql` to create the limited users (it needs passwords set first, so read the top of that file or `database/SECURITY.md`), and then `009_monitoring.sql` for the change log and health views (see `database/MONITORING.md`). Always run 009 **after** the sample data is loaded.
 
 The result is identical to the export. Migrations 001 to 003 record the first version of the tables and the fixes that were applied to it, so **do not run 001 to 003 on a database that already has the tables**. Table and database names are not case sensitive on Windows, but they are on Linux, so keep the same capitalisation in every file.
 
@@ -345,6 +347,17 @@ bash database/backup/restore.sh backups/FILE.sql            # restore (asks you 
 
 A failed or empty backup is never saved, and the restore script refuses empty or cut-off files. See `database/SECURITY.md` for the full steps.
 
+### Monitoring (D7)
+
+Migration 009 and the scripts in `database/monitor/` add logging, metrics and alerts:
+
+- **Change log:** the `audit_log` table records every change to loans, fines and M-Pesa payments, who made it, and the old and new values. Private details such as phone numbers are not logged.
+- **Dashboard and alerts:** the views `v_monitor_health`, `v_monitor_table_sizes` and `v_monitor_alerts` show key numbers and list every problem found right now (inconsistent copy counts, overdue loans, stuck payments and so on).
+- **Health check:** `bash database/monitor/health_check.sh` prints OK, WARN or CRIT and sets an exit code, checks the age of your newest backup, and can post alerts to a webhook.
+- **Slow query log:** `database/monitor/enable_logging.sql` turns it on.
+
+Details, an example report and scheduling are in `database/MONITORING.md`.
+
 ### Automatic checks and Docker (D6)
 
 **Automatic checks.** Every time you push a change inside `database/`, GitHub starts a temporary MySQL 8, builds a fresh database from the numbered files, and runs `database/ci/check_database.sh`. It checks that:
@@ -352,9 +365,11 @@ A failed or empty backup is never saved, and the restore script refuses empty or
 - every migration and seed file runs without errors
 - the database has the expected tables, views, foreign keys and safety rules
 - the sample data is all there
+- the change log records the right things, and not private data
 - bad data is rejected and good data is accepted
 - the export saved in the repository is **not empty**, is complete, and loads into an empty database
 - `backup.sh` and `restore.sh` work, and restore refuses an empty backup
+- `health_check.sh` runs
 
 Open the **Actions** tab of the repository to see a green tick (passed) or a red cross (failed). The script works in its own database called `KISII_LIBRARY_CI` and refuses to touch `KISII_LIBRARY`. You can run it yourself with `bash database/ci/check_database.sh`.
 
@@ -407,6 +422,8 @@ It uses port 3307 so it does not clash with a MySQL already on your computer. `d
 | `database/backup/backup.sh`, `restore.sh` | Safe backup and restore scripts |
 | `database/SECURITY.md` | Users, secrets, SSL, backups and recovery explained |
 | `database/ci/check_database.sh` | The automatic checks (also runnable by hand) |
+| `database/monitor/health_check.sh`, `enable_logging.sql` | Health check and slow query log |
+| `database/MONITORING.md` | Monitoring explained |
 | `.github/workflows/database-ci.yml` | Makes GitHub run those checks on every push |
 | `docker-compose.yml`, `.env.example` | Runs the database in Docker |
 

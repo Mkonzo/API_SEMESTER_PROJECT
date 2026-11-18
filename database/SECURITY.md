@@ -85,10 +85,15 @@ The restore script refuses empty or cut-off files, so a broken backup cannot ove
 
 **What you can lose:** everything added after the last backup. Back up more often if the data changes often.
 
-## 6. Quick checklist
+## 6. Who changed what
+
+The change log (`audit_log`, migration 009) records who changed loans, fines and payments, and when. It does not record private details such as phone numbers. See `database/MONITORING.md`. The backend user `library_app` can in principle edit that log, because it has rights on the whole database. For stronger protection, grant it rights table by table and leave `audit_log` out.
+
+## 7. Quick checklist
 
 - [ ] `008_app_users.sql` run, and the backend uses `library_app` (not `root`)
 - [ ] No passwords in any file in the repository
 - [ ] `.env` and `backups/` are ignored by Git
 - [ ] A backup was taken and `--verify` printed PASS
 - [ ] The hosted database requires SSL
+- [ ] Monitoring is on (see `MONITORING.md`)

@@ -34,6 +34,8 @@ fi
 q() { mysql "${AUTH[@]}" -N -B -e "$1" | tr -d '\r'; }
 
 count_tables() { q "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='$1' AND TABLE_TYPE='BASE TABLE'"; }
+count_triggers() { q "SELECT COUNT(*) FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA='$1'"; }
+count_views() { q "SELECT COUNT(*) FROM information_schema.VIEWS WHERE TABLE_SCHEMA='$1'"; }
 count_rows() {  # total rows across all base tables
   local total=0 t n
   for t in $(q "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA='$1' AND TABLE_TYPE='BASE TABLE' ORDER BY 1"); do
@@ -60,10 +62,12 @@ if [ "${1:-}" = "--verify" ]; then
   fi
   T1="$(count_tables "$SOURCE_DB")"; T2="$(count_tables "$TEST_DB")"
   R1="$(count_rows "$SOURCE_DB")";   R2="$(count_rows "$TEST_DB")"
+  G1="$(count_triggers "$SOURCE_DB")"; G2="$(count_triggers "$TEST_DB")"
+  V1="$(count_views "$SOURCE_DB")";    V2="$(count_views "$TEST_DB")"
   q "DROP DATABASE \`$TEST_DB\`"
-  echo "Live database: $T1 tables, $R1 rows"
-  echo "Restored copy: $T2 tables, $R2 rows"
-  if [ "$T1" = "$T2" ] && [ "$R1" = "$R2" ]; then echo "PASS: the backup restores to an identical copy."; exit 0
+  echo "Live database: $T1 tables, $V1 views, $G1 triggers, $R1 rows"
+  echo "Restored copy: $T2 tables, $V2 views, $G2 triggers, $R2 rows"
+  if [ "$T1" = "$T2" ] && [ "$R1" = "$R2" ] && [ "$G1" = "$G2" ] && [ "$V1" = "$V2" ]; then echo "PASS: the backup restores to an identical copy."; exit 0
   else echo "FAIL: the restored copy differs from the live database (changes made after the backup would also cause this)." >&2; exit 1; fi
 fi
 
@@ -79,4 +83,4 @@ fi
 
 q "CREATE DATABASE IF NOT EXISTS \`$TARGET\` CHARACTER SET utf8mb4;" || exit 1
 mysql "${AUTH[@]}" "$TARGET" < "$FILE" || { echo "RESTORE FAILED." >&2; exit 1; }
-echo "Restored $FILE into $TARGET: $(count_tables "$TARGET") tables, $(count_rows "$TARGET") rows."
+echo "Restored $FILE into $TARGET: $(count_tables "$TARGET") tables, $(count_views "$TARGET") views, $(count_triggers "$TARGET") triggers, $(count_rows "$TARGET") rows."

@@ -16,6 +16,37 @@
 /*!40111 SET @OLD_SQL_NOTES=@@SQL_NOTES, SQL_NOTES=0 */;
 
 --
+-- Table structure for table `audit_log`
+--
+
+DROP TABLE IF EXISTS `audit_log`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!50503 SET character_set_client = utf8mb4 */;
+CREATE TABLE `audit_log` (
+  `Audit_ID` bigint NOT NULL AUTO_INCREMENT,
+  `Table_name` varchar(64) NOT NULL,
+  `Row_id` int NOT NULL,
+  `Action` enum('INSERT','UPDATE','DELETE') NOT NULL,
+  `Old_values` json DEFAULT NULL,
+  `New_values` json DEFAULT NULL,
+  `Changed_by` varchar(100) NOT NULL,
+  `Changed_at` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`Audit_ID`),
+  KEY `idx_audit_table_row` (`Table_name`,`Row_id`),
+  KEY `idx_audit_time` (`Changed_at`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+--
+-- Dumping data for table `audit_log`
+--
+
+LOCK TABLES `audit_log` WRITE;
+/*!40000 ALTER TABLE `audit_log` DISABLE KEYS */;
+/*!40000 ALTER TABLE `audit_log` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `authors`
 --
 
@@ -224,6 +255,65 @@ LOCK TABLES `fines` WRITE;
 INSERT INTO `fines` VALUES (2,2,'Unpaid','Overdue',20.00,'2026-10-17',NULL,NULL,1);
 /*!40000 ALTER TABLE `fines` ENABLE KEYS */;
 UNLOCK TABLES;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = cp850 */ ;
+/*!50003 SET character_set_results = cp850 */ ;
+/*!50003 SET collation_connection  = cp850_general_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_fines_insert` AFTER INSERT ON `fines` FOR EACH ROW INSERT INTO audit_log (Table_name, Row_id, Action, New_values, Changed_by)
+  VALUES ('fines', NEW.Fine_ID, 'INSERT',
+          JSON_OBJECT('Loan_ID', NEW.Loan_ID, 'Member_ID', NEW.Member_ID, 'Status', NEW.Status, 'Reason', NEW.Reason,
+                      'Amount', NEW.Amount, 'Paid_at', NEW.Paid_at, 'Mpesa_receipt', NEW.Mpesa_receipt),
+          USER()) */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = cp850 */ ;
+/*!50003 SET character_set_results = cp850 */ ;
+/*!50003 SET collation_connection  = cp850_general_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_fines_update` AFTER UPDATE ON `fines` FOR EACH ROW INSERT INTO audit_log (Table_name, Row_id, Action, Old_values, New_values, Changed_by)
+  VALUES ('fines', NEW.Fine_ID, 'UPDATE',
+          JSON_OBJECT('Loan_ID', OLD.Loan_ID, 'Member_ID', OLD.Member_ID, 'Status', OLD.Status, 'Reason', OLD.Reason,
+                      'Amount', OLD.Amount, 'Paid_at', OLD.Paid_at, 'Mpesa_receipt', OLD.Mpesa_receipt),
+          JSON_OBJECT('Loan_ID', NEW.Loan_ID, 'Member_ID', NEW.Member_ID, 'Status', NEW.Status, 'Reason', NEW.Reason,
+                      'Amount', NEW.Amount, 'Paid_at', NEW.Paid_at, 'Mpesa_receipt', NEW.Mpesa_receipt),
+          USER()) */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = cp850 */ ;
+/*!50003 SET character_set_results = cp850 */ ;
+/*!50003 SET collation_connection  = cp850_general_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_fines_delete` AFTER DELETE ON `fines` FOR EACH ROW INSERT INTO audit_log (Table_name, Row_id, Action, Old_values, Changed_by)
+  VALUES ('fines', OLD.Fine_ID, 'DELETE',
+          JSON_OBJECT('Loan_ID', OLD.Loan_ID, 'Member_ID', OLD.Member_ID, 'Status', OLD.Status, 'Reason', OLD.Reason,
+                      'Amount', OLD.Amount, 'Paid_at', OLD.Paid_at, 'Mpesa_receipt', OLD.Mpesa_receipt),
+          USER()) */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `loans`
@@ -262,6 +352,65 @@ LOCK TABLES `loans` WRITE;
 INSERT INTO `loans` VALUES ('2026-09-20','2026-10-04','2026-10-03',1,1,1,0,'Returned'),('2026-10-01','2026-10-15',NULL,3,2,2,0,'Overdue'),('2026-10-10','2026-10-24',NULL,2,1,3,0,'Active');
 /*!40000 ALTER TABLE `loans` ENABLE KEYS */;
 UNLOCK TABLES;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = cp850 */ ;
+/*!50003 SET character_set_results = cp850 */ ;
+/*!50003 SET collation_connection  = cp850_general_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_loans_insert` AFTER INSERT ON `loans` FOR EACH ROW INSERT INTO audit_log (Table_name, Row_id, Action, New_values, Changed_by)
+  VALUES ('loans', NEW.Loan_ID, 'INSERT',
+          JSON_OBJECT('Book_ID', NEW.Book_ID, 'Member_ID', NEW.Member_ID, 'Due_date', NEW.Due_date,
+                      'Returned_at', NEW.Returned_at, 'Renewal_count', NEW.Renewal_count, 'Status', NEW.Status),
+          USER()) */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = cp850 */ ;
+/*!50003 SET character_set_results = cp850 */ ;
+/*!50003 SET collation_connection  = cp850_general_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_loans_update` AFTER UPDATE ON `loans` FOR EACH ROW INSERT INTO audit_log (Table_name, Row_id, Action, Old_values, New_values, Changed_by)
+  VALUES ('loans', NEW.Loan_ID, 'UPDATE',
+          JSON_OBJECT('Book_ID', OLD.Book_ID, 'Member_ID', OLD.Member_ID, 'Due_date', OLD.Due_date,
+                      'Returned_at', OLD.Returned_at, 'Renewal_count', OLD.Renewal_count, 'Status', OLD.Status),
+          JSON_OBJECT('Book_ID', NEW.Book_ID, 'Member_ID', NEW.Member_ID, 'Due_date', NEW.Due_date,
+                      'Returned_at', NEW.Returned_at, 'Renewal_count', NEW.Renewal_count, 'Status', NEW.Status),
+          USER()) */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = cp850 */ ;
+/*!50003 SET character_set_results = cp850 */ ;
+/*!50003 SET collation_connection  = cp850_general_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_loans_delete` AFTER DELETE ON `loans` FOR EACH ROW INSERT INTO audit_log (Table_name, Row_id, Action, Old_values, Changed_by)
+  VALUES ('loans', OLD.Loan_ID, 'DELETE',
+          JSON_OBJECT('Book_ID', OLD.Book_ID, 'Member_ID', OLD.Member_ID, 'Due_date', OLD.Due_date,
+                      'Returned_at', OLD.Returned_at, 'Renewal_count', OLD.Renewal_count, 'Status', OLD.Status),
+          USER()) */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `members`
@@ -295,6 +444,27 @@ LOCK TABLES `members` WRITE;
 INSERT INTO `members` VALUES ('Test Student One','student1@example.com','0700000001','CS/0001/2022','Student',1,1,1,'2026-10-18 09:00:00'),('Test Student Two','student2@example.com','0700000002','CS/0002/2022','Student',2,1,1,'2026-10-18 09:00:00'),('Test Librarian','librarian@example.com','0700000003','STAFF/001','Staff',3,1,0,NULL);
 /*!40000 ALTER TABLE `members` ENABLE KEYS */;
 UNLOCK TABLES;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = cp850 */ ;
+/*!50003 SET character_set_results = cp850 */ ;
+/*!50003 SET collation_connection  = cp850_general_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_members_flags` AFTER UPDATE ON `members` FOR EACH ROW INSERT INTO audit_log (Table_name, Row_id, Action, Old_values, New_values, Changed_by)
+  SELECT 'members', NEW.Member_ID, 'UPDATE',
+         JSON_OBJECT('Is_active', OLD.Is_active, 'Is_verified', OLD.Is_verified),
+         JSON_OBJECT('Is_active', NEW.Is_active, 'Is_verified', NEW.Is_verified),
+         USER()
+  FROM DUAL
+  WHERE OLD.Is_active <> NEW.Is_active OR OLD.Is_verified <> NEW.Is_verified */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `mpesa_transactions`
@@ -335,6 +505,65 @@ LOCK TABLES `mpesa_transactions` WRITE;
 INSERT INTO `mpesa_transactions` VALUES (1,1,2,'254700000002',20.00,'ws_CO_SAMPLE_0001',NULL,'Pending',NULL,'2026-10-18 11:00:00',NULL);
 /*!40000 ALTER TABLE `mpesa_transactions` ENABLE KEYS */;
 UNLOCK TABLES;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = cp850 */ ;
+/*!50003 SET character_set_results = cp850 */ ;
+/*!50003 SET collation_connection  = cp850_general_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_mpesa_insert` AFTER INSERT ON `mpesa_transactions` FOR EACH ROW INSERT INTO audit_log (Table_name, Row_id, Action, New_values, Changed_by)
+  VALUES ('mpesa_transactions', NEW.Transaction_ID, 'INSERT',
+          JSON_OBJECT('Fine_ID', NEW.Fine_ID, 'Member_ID', NEW.Member_ID, 'Amount', NEW.Amount,
+                      'Status', NEW.Status, 'Mpesa_receipt', NEW.Mpesa_receipt, 'Completed_at', NEW.Completed_at),
+          USER()) */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = cp850 */ ;
+/*!50003 SET character_set_results = cp850 */ ;
+/*!50003 SET collation_connection  = cp850_general_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_mpesa_update` AFTER UPDATE ON `mpesa_transactions` FOR EACH ROW INSERT INTO audit_log (Table_name, Row_id, Action, Old_values, New_values, Changed_by)
+  VALUES ('mpesa_transactions', NEW.Transaction_ID, 'UPDATE',
+          JSON_OBJECT('Fine_ID', OLD.Fine_ID, 'Member_ID', OLD.Member_ID, 'Amount', OLD.Amount,
+                      'Status', OLD.Status, 'Mpesa_receipt', OLD.Mpesa_receipt, 'Completed_at', OLD.Completed_at),
+          JSON_OBJECT('Fine_ID', NEW.Fine_ID, 'Member_ID', NEW.Member_ID, 'Amount', NEW.Amount,
+                      'Status', NEW.Status, 'Mpesa_receipt', NEW.Mpesa_receipt, 'Completed_at', NEW.Completed_at),
+          USER()) */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
+/*!50003 SET @saved_cs_client      = @@character_set_client */ ;
+/*!50003 SET @saved_cs_results     = @@character_set_results */ ;
+/*!50003 SET @saved_col_connection = @@collation_connection */ ;
+/*!50003 SET character_set_client  = cp850 */ ;
+/*!50003 SET character_set_results = cp850 */ ;
+/*!50003 SET collation_connection  = cp850_general_ci */ ;
+/*!50003 SET @saved_sql_mode       = @@sql_mode */ ;
+/*!50003 SET sql_mode              = 'ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION' */ ;
+DELIMITER ;;
+/*!50003 CREATE*/ /*!50017 DEFINER=`root`@`localhost`*/ /*!50003 TRIGGER `trg_mpesa_delete` AFTER DELETE ON `mpesa_transactions` FOR EACH ROW INSERT INTO audit_log (Table_name, Row_id, Action, Old_values, Changed_by)
+  VALUES ('mpesa_transactions', OLD.Transaction_ID, 'DELETE',
+          JSON_OBJECT('Fine_ID', OLD.Fine_ID, 'Member_ID', OLD.Member_ID, 'Amount', OLD.Amount,
+                      'Status', OLD.Status, 'Mpesa_receipt', OLD.Mpesa_receipt, 'Completed_at', OLD.Completed_at),
+          USER()) */;;
+DELIMITER ;
+/*!50003 SET sql_mode              = @saved_sql_mode */ ;
+/*!50003 SET character_set_client  = @saved_cs_client */ ;
+/*!50003 SET character_set_results = @saved_cs_results */ ;
+/*!50003 SET collation_connection  = @saved_col_connection */ ;
 
 --
 -- Table structure for table `notifications`
@@ -525,6 +754,56 @@ SET @saved_cs_client     = @@character_set_client;
 SET character_set_client = @saved_cs_client;
 
 --
+-- Temporary view structure for view `v_monitor_alerts`
+--
+
+DROP TABLE IF EXISTS `v_monitor_alerts`;
+/*!50001 DROP VIEW IF EXISTS `v_monitor_alerts`*/;
+SET @saved_cs_client     = @@character_set_client;
+/*!50503 SET character_set_client = utf8mb4 */;
+/*!50001 CREATE VIEW `v_monitor_alerts` AS SELECT 
+ 1 AS `Severity`,
+ 1 AS `Alert`,
+ 1 AS `Count_or_value`,
+ 1 AS `Detail`*/;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary view structure for view `v_monitor_health`
+--
+
+DROP TABLE IF EXISTS `v_monitor_health`;
+/*!50001 DROP VIEW IF EXISTS `v_monitor_health`*/;
+SET @saved_cs_client     = @@character_set_client;
+/*!50503 SET character_set_client = utf8mb4 */;
+/*!50001 CREATE VIEW `v_monitor_health` AS SELECT 
+ 1 AS `Active_members`,
+ 1 AS `Books`,
+ 1 AS `Open_loans`,
+ 1 AS `Overdue_loans`,
+ 1 AS `Unpaid_fines_total`,
+ 1 AS `Pending_mpesa`,
+ 1 AS `Failed_notifications`,
+ 1 AS `Last_sync_status`,
+ 1 AS `Last_sync_at`,
+ 1 AS `Changes_last_24h`*/;
+SET character_set_client = @saved_cs_client;
+
+--
+-- Temporary view structure for view `v_monitor_table_sizes`
+--
+
+DROP TABLE IF EXISTS `v_monitor_table_sizes`;
+/*!50001 DROP VIEW IF EXISTS `v_monitor_table_sizes`*/;
+SET @saved_cs_client     = @@character_set_client;
+/*!50503 SET character_set_client = utf8mb4 */;
+/*!50001 CREATE VIEW `v_monitor_table_sizes` AS SELECT 
+ 1 AS `Table_name`,
+ 1 AS `Approx_rows`,
+ 1 AS `Size_mb`*/;
+SET character_set_client = @saved_cs_client;
+
+--
 -- Temporary view structure for view `v_verify_student`
 --
 
@@ -576,6 +855,60 @@ SET character_set_client = @saved_cs_client;
 /*!50001 SET collation_connection      = @saved_col_connection */;
 
 --
+-- Final view structure for view `v_monitor_alerts`
+--
+
+/*!50001 DROP VIEW IF EXISTS `v_monitor_alerts`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = cp850 */;
+/*!50001 SET character_set_results     = cp850 */;
+/*!50001 SET collation_connection      = cp850_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
+/*!50001 VIEW `v_monitor_alerts` AS select 'CRIT' AS `Severity`,'Copy counts do not match loans' AS `Alert`,count(0) AS `Count_or_value`,'Books whose available copies differ from total copies minus open loans' AS `Detail` from `books` `b` where (`b`.`Available_Copies` <> (`b`.`Total_Copies` - (select count(0) from `loans` `l` where ((`l`.`Book_ID` = `b`.`Book_ID`) and (`l`.`Returned_at` is null))))) having (count(0) > 0) union all select 'CRIT' AS `CRIT`,'Registry sync failed' AS `Registry sync failed`,count(0) AS `COUNT(*)`,'The most recent student registry sync ended in failure' AS `The most recent student registry sync ended in failure` from (select `registry_sync_log`.`Status` AS `Status` from `registry_sync_log` order by `registry_sync_log`.`Sync_ID` desc limit 1) `last_sync` where (`last_sync`.`Status` = 'Failed') having (count(0) > 0) union all select 'WARN' AS `WARN`,'Registry sync is stale' AS `Registry sync is stale`,1 AS `1`,'No successful student registry sync in the last 7 days' AS `No successful student registry sync in the last 7 days` from DUAL  where exists(select 1 from `registry_sync_log` where ((`registry_sync_log`.`Status` = 'Success') and (`registry_sync_log`.`Started_at` >= (now() - interval 7 day)))) is false union all select 'WARN' AS `WARN`,'Overdue loans' AS `Overdue loans`,count(0) AS `COUNT(*)`,'Loans past their due date and not yet returned' AS `Loans past their due date and not yet returned` from `loans` where ((`loans`.`Returned_at` is null) and (`loans`.`Due_date` < curdate())) having (count(0) > 0) union all select 'WARN' AS `WARN`,'Old unpaid fines' AS `Old unpaid fines`,count(0) AS `COUNT(*)`,'Fines unpaid for more than 30 days' AS `Fines unpaid for more than 30 days` from `fines` where ((`fines`.`Status` = 'Unpaid') and (`fines`.`Issued_at` < (curdate() - interval 30 day))) having (count(0) > 0) union all select 'WARN' AS `WARN`,'M-Pesa payments stuck' AS `M-Pesa payments stuck`,count(0) AS `COUNT(*)`,'Payments still Pending after more than 1 day' AS `Payments still Pending after more than 1 day` from `mpesa_transactions` where ((`mpesa_transactions`.`Status` = 'Pending') and (`mpesa_transactions`.`Initiated_at` < (now() - interval 1 day))) having (count(0) > 0) union all select 'WARN' AS `WARN`,'M-Pesa payments failed' AS `M-Pesa payments failed`,count(0) AS `COUNT(*)`,'Payments that ended as Failed' AS `Payments that ended as Failed` from `mpesa_transactions` where (`mpesa_transactions`.`Status` = 'Failed') having (count(0) > 0) union all select 'WARN' AS `WARN`,'Notifications failed' AS `Notifications failed`,count(0) AS `COUNT(*)`,'Messages that could not be sent' AS `Messages that could not be sent` from `notifications` where (`notifications`.`Status` = 'Failed') having (count(0) > 0) union all select 'INFO' AS `INFO`,'Books with no copies on the shelf' AS `Books with no copies on the shelf`,count(0) AS `COUNT(*)`,'Books where every copy is out' AS `Books where every copy is out` from `books` where (`books`.`Available_Copies` = 0) having (count(0) > 0) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `v_monitor_health`
+--
+
+/*!50001 DROP VIEW IF EXISTS `v_monitor_health`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = cp850 */;
+/*!50001 SET character_set_results     = cp850 */;
+/*!50001 SET collation_connection      = cp850_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
+/*!50001 VIEW `v_monitor_health` AS select (select count(0) from `members` where (`members`.`Is_active` = true)) AS `Active_members`,(select count(0) from `books`) AS `Books`,(select count(0) from `loans` where (`loans`.`Returned_at` is null)) AS `Open_loans`,(select count(0) from `loans` where ((`loans`.`Returned_at` is null) and (`loans`.`Due_date` < curdate()))) AS `Overdue_loans`,(select coalesce(sum(`fines`.`Amount`),0) from `fines` where (`fines`.`Status` = 'Unpaid')) AS `Unpaid_fines_total`,(select count(0) from `mpesa_transactions` where (`mpesa_transactions`.`Status` = 'Pending')) AS `Pending_mpesa`,(select count(0) from `notifications` where (`notifications`.`Status` = 'Failed')) AS `Failed_notifications`,(select `registry_sync_log`.`Status` from `registry_sync_log` order by `registry_sync_log`.`Sync_ID` desc limit 1) AS `Last_sync_status`,(select max(`registry_sync_log`.`Started_at`) from `registry_sync_log`) AS `Last_sync_at`,(select count(0) from `audit_log` where (`audit_log`.`Changed_at` >= (now() - interval 1 day))) AS `Changes_last_24h` */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
+-- Final view structure for view `v_monitor_table_sizes`
+--
+
+/*!50001 DROP VIEW IF EXISTS `v_monitor_table_sizes`*/;
+/*!50001 SET @saved_cs_client          = @@character_set_client */;
+/*!50001 SET @saved_cs_results         = @@character_set_results */;
+/*!50001 SET @saved_col_connection     = @@collation_connection */;
+/*!50001 SET character_set_client      = cp850 */;
+/*!50001 SET character_set_results     = cp850 */;
+/*!50001 SET collation_connection      = cp850_general_ci */;
+/*!50001 CREATE ALGORITHM=UNDEFINED */
+/*!50013 DEFINER=`root`@`localhost` SQL SECURITY DEFINER */
+/*!50001 VIEW `v_monitor_table_sizes` AS select `information_schema`.`tables`.`TABLE_NAME` AS `Table_name`,`information_schema`.`tables`.`TABLE_ROWS` AS `Approx_rows`,round((((`information_schema`.`tables`.`DATA_LENGTH` + `information_schema`.`tables`.`INDEX_LENGTH`) / 1024) / 1024),3) AS `Size_mb` from `information_schema`.`TABLES` where ((`information_schema`.`tables`.`TABLE_SCHEMA` = 'KISII_LIBRARY') and (`information_schema`.`tables`.`TABLE_TYPE` = 'BASE TABLE')) */;
+/*!50001 SET character_set_client      = @saved_cs_client */;
+/*!50001 SET character_set_results     = @saved_cs_results */;
+/*!50001 SET collation_connection      = @saved_col_connection */;
+
+--
 -- Final view structure for view `v_verify_student`
 --
 
@@ -602,4 +935,4 @@ SET character_set_client = @saved_cs_client;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
 /*!40111 SET SQL_NOTES=@OLD_SQL_NOTES */;
 
--- Dump completed on 2026-11-16 19:22:59
+-- Dump completed on 2026-11-18  3:25:38
