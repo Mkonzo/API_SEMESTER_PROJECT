@@ -55,6 +55,10 @@ API_SEMESTER_PROJECT/
 │   └── database-ci.yml           GitHub builds and checks the database on every push
 ├── docker-compose.yml            Runs the database in Docker
 ├── .env.example                  Names of the settings Docker needs (copy to .env)
+├── docs/
+│   ├── data-dictionary.md        Every table, column, view and trigger explained
+│   ├── er-diagram.md             The ER diagram page, with the pictures
+│   └── er-diagram*.png / .svg    The diagram as pictures (key columns, and all columns)
 ├── spec/
 │   └── library-api.yaml          OpenAPI 3.0 specification
 ├── database/
@@ -297,6 +301,12 @@ categories ──< books >── book_authors ──< authors
 
 `──<` means one on the left, many on the right.
 
+The same thing as a proper picture (primary and foreign keys only; the full version is in [docs/er-diagram.md](docs/er-diagram.md)):
+
+![ER diagram](docs/er-diagram.png)
+
+Every column of every table is explained in the [data dictionary](docs/data-dictionary.md).
+
 ### Newer tables and views
 
 | Name | Type | Purpose | Migration |
@@ -358,6 +368,15 @@ Migration 009 and the scripts in `database/monitor/` add logging, metrics and al
 
 Details, an example report and scheduling are in `database/MONITORING.md`.
 
+### Documentation: data dictionary and ER diagram
+
+The `docs/` folder explains the database for people who have never seen it:
+
+- **`docs/data-dictionary.md`** describes every table, column, view and trigger: its type, whether it is required, its keys, and what it means. It also shows which API resource uses which tables.
+- **`docs/er-diagram.md`** shows the ER diagram as pictures (`er-diagram.png` with the key columns, `er-diagram-full.png` with every column) and as an interactive diagram that GitHub draws by itself. It lists the relationships in words.
+
+They were generated from the real database structure, so the names and types are exact. The automatic checks fail if a table, column, view or trigger is missing from them, so the documentation cannot quietly go out of date. When you add a migration, update these files in the same push.
+
 ### Automatic checks and Docker (D6)
 
 **Automatic checks.** Every time you push a change inside `database/`, GitHub starts a temporary MySQL 8, builds a fresh database from the numbered files, and runs `database/ci/check_database.sh`. It checks that:
@@ -366,6 +385,7 @@ Details, an example report and scheduling are in `database/MONITORING.md`.
 - the database has the expected tables, views, foreign keys and safety rules
 - the sample data is all there
 - the change log records the right things, and not private data
+- the documents in `docs/` list every table, column, view and trigger, and the ER diagram shows every table
 - bad data is rejected and good data is accepted
 - the export saved in the repository is **not empty**, is complete, and loads into an empty database
 - `backup.sh` and `restore.sh` work, and restore refuses an empty backup
@@ -424,6 +444,8 @@ It uses port 3307 so it does not clash with a MySQL already on your computer. `d
 | `database/ci/check_database.sh` | The automatic checks (also runnable by hand) |
 | `database/monitor/health_check.sh`, `enable_logging.sql` | Health check and slow query log |
 | `database/MONITORING.md` | Monitoring explained |
+| `docs/data-dictionary.md` | Every table, column, view and trigger explained |
+| `docs/er-diagram.md` and the `er-diagram*.png` / `.svg` files | The ER diagram |
 | `.github/workflows/database-ci.yml` | Makes GitHub run those checks on every push |
 | `docker-compose.yml`, `.env.example` | Runs the database in Docker |
 

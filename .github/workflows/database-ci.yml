@@ -8,10 +8,12 @@ on:
     branches: [main]
     paths:
       - "database/**"
+      - "docs/**"
       - ".github/workflows/database-ci.yml"
   pull_request:
     paths:
       - "database/**"
+      - "docs/**"
       - ".github/workflows/database-ci.yml"
   workflow_dispatch:
 

@@ -167,6 +167,48 @@ script_env DB_NAME="$DB" BACKUP_DIR="$WORK/backups" bash "$DBDIR/monitor/health_
 HC=$?
 if [ "$HC" -le 1 ] && grep -q "Library database health" "$WORK/health.log"; then ok "health_check.sh ran (result code $HC: 0 = OK, 1 = warnings)"; else bad "health_check.sh gave code $HC: $(tail -2 "$WORK/health.log" | tr '\n' ' ')"; fi
 
+echo "== 11. Documentation matches the database"
+DOC="$HERE/docs/data-dictionary.md"
+ER="$HERE/docs/er-diagram.md"
+if [ ! -f "$DOC" ]; then bad "docs/data-dictionary.md is missing"
+else
+  MISSING=""; NCOL=0
+  while IFS=$'\t' read -r t c; do
+    NCOL=$((NCOL + 1))
+    awk -v t="$t" -v c="$c" 'BEGIN { h = "### `" t "`"; r = "| `" c "` |" }
+         $0 == h { ins = 1; next }
+         /^##/ { ins = 0 }
+         ins && index($0, r) == 1 { f = 1 }
+         END { exit !f }' "$DOC" || MISSING="$MISSING $t.$c"
+  done < <(q "SELECT c.TABLE_NAME, c.COLUMN_NAME FROM information_schema.COLUMNS c JOIN information_schema.TABLES t ON t.TABLE_SCHEMA=c.TABLE_SCHEMA AND t.TABLE_NAME=c.TABLE_NAME WHERE c.TABLE_SCHEMA='$DB' AND t.TABLE_TYPE='BASE TABLE' ORDER BY c.TABLE_NAME, c.ORDINAL_POSITION")
+  if [ -z "$MISSING" ] && [ "$NCOL" -gt 0 ]; then ok "every column of every table is in the data dictionary ($NCOL columns)"
+  else bad "not in docs/data-dictionary.md:$(echo $MISSING | cut -c1-200)"; fi
+
+  MISSING=""
+  for n in $(q "SELECT TABLE_NAME FROM information_schema.VIEWS WHERE TABLE_SCHEMA='$DB'") $(q "SELECT TRIGGER_NAME FROM information_schema.TRIGGERS WHERE TRIGGER_SCHEMA='$DB'"); do
+    grep -qF "\`$n\`" "$DOC" || MISSING="$MISSING $n"
+  done
+  if [ -z "$MISSING" ]; then ok "every view and trigger is in the data dictionary"; else bad "views or triggers not in the data dictionary:$MISSING"; fi
+
+  # the dictionary must not describe columns or tables that no longer exist
+  EXTRA=""
+  for t in $(grep '^### `' "$DOC" | sed 's/^### `\(.*\)`$/\1/'); do
+    case " $(q "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA='$DB'" | tr '\n' ' ') " in *" $t "*) ;; *) EXTRA="$EXTRA $t";; esac
+  done
+  if [ -z "$EXTRA" ]; then ok "the dictionary describes nothing that no longer exists"; else bad "described in the dictionary but not in the database:$EXTRA"; fi
+fi
+if [ ! -f "$ER" ]; then bad "docs/er-diagram.md is missing"
+else
+  MISSING=""
+  for t in $(q "SELECT TABLE_NAME FROM information_schema.TABLES WHERE TABLE_SCHEMA='$DB' AND TABLE_TYPE='BASE TABLE'"); do
+    grep -q "^  $t {" "$ER" || MISSING="$MISSING $t"
+  done
+  if [ -z "$MISSING" ]; then ok "every table is in the ER diagram"; else bad "tables missing from docs/er-diagram.md:$MISSING"; fi
+fi
+for img in er-diagram.png er-diagram-full.png; do
+  if [ -s "$HERE/docs/$img" ]; then ok "docs/$img exists"; else bad "docs/$img is missing or empty"; fi
+done
+
 echo
 echo "Result: $PASS passed, $FAIL failed"
 [ "$FAIL" -eq 0 ] && echo "ALL CHECKS PASSED" || { echo "SOME CHECKS FAILED" >&2; exit 1; }
